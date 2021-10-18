@@ -179,6 +179,23 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const getResource = async (url) => {
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            throw new Error(`Could not fetch ${url}, status: ${res.status}`);
+        }
+
+        return await res.json();
+    };
+
+    getResource('http://localhost:3000/menu')
+        .then(data => {
+            data.forEach(({img, altimg, title, descr, price}) => {
+                new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
+            });
+        });
+/* 
     new MenuCard(
         "img/tabs/vegy.jpg",
         "vegy",
@@ -208,7 +225,7 @@ window.addEventListener('DOMContentLoaded', () => {
         '.menu .container',
         'menu__item'
     ).render();
-
+ */
     // Forms
 
     const forms = document.querySelectorAll('form');
@@ -220,10 +237,22 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     forms.forEach(item => {
-        postData(item);
+        bindPostData(item);
     });
 
-    function postData(form) {
+    const postData = async (url, data) => {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: data
+        });
+
+        return await res.json();
+    };
+
+    function bindPostData(form) {
         form.addEventListener('submit', (e) => {
                 e.preventDefault();
 
@@ -236,31 +265,19 @@ window.addEventListener('DOMContentLoaded', () => {
                 /* form.append(statusMessage); */
                 form.insertAdjacentElement('afterend', statusMessage);
 
-                const request = new XMLHttpRequest();
-                request.open('POST', 'server.php');
-
-                request.setRequestHeader('Content-tupe', 'application/json');
                 const formData = new FormData(form);
 
-                const object = {};
-                formData.forEach(function(value, key) {
-                    object[key] = value;
-                });
+                const json = JSON.stringify(Object.fromEntries(formData.entries()));
 
-                const json = JSON.stringify(object);
-
-                request.send(json);
-
-
-                request.addEventListener('load', () => {
-                    if (request.status === 200) {
-                        console.log(request.response);
-                        showThanksModal(message.success);
-                        form.reset();
-                        statusMessage.remove();
-                    } else {
-                        howThanksModal(message.failure);
-                    }
+                postData('http://localhost:3000/requests', json)
+                .then(data => {
+                    console.log(data);
+                    showThanksModal(message.success);
+                    statusMessage.remove();
+                }).catch(() => {
+                    showThanksModal(message.failure);
+                }).finally(() => {
+                    form.reset();
                 });
         });
     }
@@ -288,4 +305,18 @@ window.addEventListener('DOMContentLoaded', () => {
             closeModal();
         }, 4000);
     }
+
+    /* fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: "POST",
+        body: JSON.stringify({name: "Alex"}),
+        headers: {
+            'Content-type': 'application/json'
+        }
+    })
+        .then(response => response.json())
+        .then(json => console.log(json)); */
+
+    fetch('http://localhost:3000/menu')
+        .then(data => data.json())
+        .then(res => console.log(res));
 });
